@@ -1,0 +1,72 @@
+.slider-wrapper {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+    width: 100%;
+    background-color: black;
+  }
+  
+  /* Track más largo para permitir animación fluida con 10 imágenes (5 originales + 5 copias) */
+  .slider-track {
+    display: flex;
+    width: 1000%; /* 10 imágenes = 1000% */
+    height: 100%;
+    animation: slideImages 40s linear infinite;
+    font-size: 0;
+    gap: 0;
+  }
+  
+  /* Cada imagen ocupa 1/10 del ancho total */
+  .slider-track img {
+    width: calc(100% / 10);
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    filter: brightness(0.6) contrast(1.1);
+  }
+  
+  .slider-wrapper:hover .slider-track {
+    animation-play-state: paused;
+  }
+  
+  /* Contenido centrado sobre el carrusel */
+  .musica-hero-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    text-align: center;
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2));
+  }
+  
+  .musica-hero-content h1 {
+    margin: 0;
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .musica-hero-content p {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+    color: #ccc;
+  }
+  
+  /* Animación del carrusel */
+  @keyframes slideImages {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%); /* 5 imágenes originales + 5 duplicadas → 50% scroll */
+    }
+  }
+  
