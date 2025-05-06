@@ -1,0 +1,33 @@
+<div class="user-table-container">
+  <h2>Lista de Usuarios</h2>
+
+  <div class="text-end mb-3">
+    <button class="btn btn-success" [routerLink]="['/forum/usuarios/crear']">
+      Ingresar nuevo usuario
+    </button>
+  </div>
+  
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td>
+          <button (click)="deleteUser(user.id)" class="btn btn-danger btn-sm">
+            Eliminar
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
