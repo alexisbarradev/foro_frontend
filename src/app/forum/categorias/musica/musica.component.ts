@@ -15,18 +15,12 @@ import { UserService } from '../../../services/user.service';
         <h1>MÚSICA</h1>
         <p>Comparte y comenta sobre tus artistas y discos favoritos, desde el pop hasta el metal japonés.</p>
       </div>
-
       <div class="slider-track">
         <img src="assets/dualipa.jpg" alt="Dua Lipa">
         <img src="assets/poppy.jpg" alt="Poppy">
         <img src="assets/riseofnorthstar.jpg" alt="Rise of the Northstar">
         <img src="assets/britney.jpg" alt="Britney Spears">
         <img src="assets/lp.jpg" alt="LP">
-        <img src="assets/dualipa.jpg" alt="Dua Lipa Copy">
-        <img src="assets/poppy.jpg" alt="Poppy Copy">
-        <img src="assets/riseofnorthstar.jpg" alt="Rise of the Northstar Copy">
-        <img src="assets/britney.jpg" alt="Britney Copy">
-        <img src="assets/lp.jpg" alt="LP Copy">
       </div>
     </div>
 
@@ -62,7 +56,31 @@ import { UserService } from '../../../services/user.service';
         </thead>
         <tbody>
           <tr *ngFor="let topic of topics">
-            <td>{{ topic.title }}</td>
+            <td>
+              {{ topic.title }}
+              <br>
+              <button class="btn btn-sm btn-outline-info mt-2" (click)="toggleComentarios(topic.id)">
+                {{ mostrarComentarios[topic.id] ? 'Ocultar' : 'Ver' }} comentarios
+              </button>
+
+              <div *ngIf="mostrarComentarios[topic.id]">
+                <ul class="list-group mt-2" *ngIf="commentsMap[topic.id]?.length">
+                  <li class="list-group-item" *ngFor="let c of commentsMap[topic.id]">
+                    <strong>{{ c.author }}</strong>: {{ c.text }}
+                  </li>
+                </ul>
+                <p *ngIf="!commentsMap[topic.id]?.length" class="text-muted">No hay comentarios.</p>
+
+                <form [formGroup]="commentForms[topic.id]" (ngSubmit)="enviarComentario(topic.id)" class="mt-2">
+                  <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Escribe un comentario..." formControlName="text">
+                    <button class="btn btn-outline-success" type="submit" [disabled]="commentForms[topic.id].invalid">
+                      Enviar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </td>
             <td>{{ topic.author }}</td>
             <td>{{ topic.createdAt | date:'short' }}</td>
             <td *ngIf="esAdmin">
@@ -81,6 +99,9 @@ export class MusicaComponent implements OnInit {
   topicForm: FormGroup;
   mostrarFormulario = false;
   esAdmin = false;
+  commentForms: { [key: number]: FormGroup } = {};
+  commentsMap: { [key: number]: any[] } = {};
+  mostrarComentarios: { [key: number]: boolean } = {};
 
   constructor(
     private http: HttpClient,
@@ -94,13 +115,19 @@ export class MusicaComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.esAdmin = this.userService.isAdmin(); // Detectar si es admin
+    this.esAdmin = this.userService.isAdmin();
     this.obtenerTopics();
   }
 
   obtenerTopics() {
     this.http.get<any[]>('http://localhost:8081/api/topics/by-category/MUSICA')
-      .subscribe(data => this.topics = data);
+      .subscribe(data => {
+        this.topics = data;
+        this.topics.forEach(topic => {
+          this.commentForms[topic.id] = this.fb.group({ text: ['', Validators.required] });
+          this.obtenerComentarios(topic.id);
+        });
+      });
   }
 
   onSubmit() {
@@ -113,26 +140,42 @@ export class MusicaComponent implements OnInit {
 
     this.http.post('http://localhost:8081/api/topics/create?categoryId=5', newTopic, {
       responseType: 'text'
-    }).subscribe({
-      next: () => {
-        this.topicForm.reset();
-        this.mostrarFormulario = false;
-        this.obtenerTopics();
-      },
-      error: err => console.error('❌ Error al crear tópico:', err)
+    }).subscribe(() => {
+      this.topicForm.reset();
+      this.mostrarFormulario = false;
+      this.obtenerTopics();
     });
   }
 
   eliminarTema(id: number) {
     if (confirm('¿Estás seguro de que quieres eliminar este tema?')) {
-      this.http.delete(`http://localhost:8081/api/topics/delete/${id}`)
-        .subscribe({
-          next: () => {
-            console.log('🗑️ Tópico eliminado:', id);
-            this.obtenerTopics();
-          },
-          error: err => console.error('❌ Error al borrar tópico:', err)
-        });
+      this.http.delete(`http://localhost:8081/api/topics/delete/${id}`).subscribe(() => {
+        this.obtenerTopics();
+      });
     }
+  }
+
+  obtenerComentarios(topicId: number) {
+    this.http.get<any[]>(`http://localhost:8081/api/topics/${topicId}/comments`)
+      .subscribe(data => this.commentsMap[topicId] = data);
+  }
+
+  enviarComentario(topicId: number) {
+    const form = this.commentForms[topicId];
+    if (form.invalid) return;
+
+    const comment = {
+      text: form.value.text,
+      author: this.userService.getUsername()
+    };
+
+    this.http.post(`http://localhost:8081/api/topics/${topicId}/comments`, comment).subscribe(() => {
+      form.reset();
+      this.obtenerComentarios(topicId);
+    });
+  }
+
+  toggleComentarios(topicId: number) {
+    this.mostrarComentarios[topicId] = !this.mostrarComentarios[topicId];
   }
 }
