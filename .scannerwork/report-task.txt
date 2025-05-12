@@ -1,6 +1,6 @@
 projectKey=foro-frontend
 serverUrl=http://localhost:9000
-serverVersion=9.9.8.100196
+serverVersion=25.5.0.107428
 dashboardUrl=http://localhost:9000/dashboard?id=foro-frontend
-ceTaskId=AZaixPeHsQ-Q8f3krjDN
-ceTaskUrl=http://localhost:9000/api/ce/task?id=AZaixPeHsQ-Q8f3krjDN
+ceTaskId=c95c0a3d-2e8b-4429-bbb4-7eea424f2e60
+ceTaskUrl=http://localhost:9000/api/ce/task?id=c95c0a3d-2e8b-4429-bbb4-7eea424f2e60

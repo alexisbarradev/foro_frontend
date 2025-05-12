@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserService } from '../../../services/user.service';
+import { environment } from '../../../../environments/environments';
 
 @Component({
   selector: 'app-cine',
@@ -63,7 +64,31 @@ import { UserService } from '../../../services/user.service';
         </thead>
         <tbody>
           <tr *ngFor="let topic of topics">
-            <td>{{ topic.title }}</td>
+            <td>
+              {{ topic.title }}
+              <br>
+              <button class="btn btn-sm btn-outline-info mt-2" (click)="toggleComentarios(topic.id)">
+                {{ mostrarComentarios[topic.id] ? 'Ocultar' : 'Ver' }} comentarios
+              </button>
+
+              <div *ngIf="mostrarComentarios[topic.id]">
+                <ul class="list-group mt-2" *ngIf="commentsMap[topic.id]?.length">
+                  <li class="list-group-item" *ngFor="let c of commentsMap[topic.id]">
+                    <strong>{{ c.author }}</strong>: {{ c.text }}
+                  </li>
+                </ul>
+                <p *ngIf="!commentsMap[topic.id]?.length" class="text-muted">No hay comentarios.</p>
+
+                <form [formGroup]="commentForms[topic.id]" (ngSubmit)="enviarComentario(topic.id)" class="mt-2">
+                  <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Escribe un comentario..." formControlName="text">
+                    <button class="btn btn-outline-success" type="submit" [disabled]="commentForms[topic.id].invalid">
+                      Enviar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </td>
             <td>{{ topic.author }}</td>
             <td>{{ topic.createdAt | date:'short' }}</td>
             <td *ngIf="esAdmin">
@@ -78,11 +103,16 @@ import { UserService } from '../../../services/user.service';
   `
 })
 export class CineComponent implements OnInit {
+  private readonly API_BASE = environment.apiUrl;
+
   topics: any[] = [];
+  commentForms: { [key: number]: FormGroup } = {};
+  commentsMap: { [key: number]: any[] } = {};
+  mostrarComentarios: { [key: number]: boolean } = {};
   topicForm: FormGroup;
   mostrarFormulario = false;
   esAdmin = false;
-  author: string = ''; // ✅ Usado para el input del autor
+  author: string = '';
 
   constructor(
     private http: HttpClient,
@@ -97,13 +127,19 @@ export class CineComponent implements OnInit {
 
   ngOnInit() {
     this.esAdmin = this.userService.isAdmin();
-    this.author = this.userService.getUsername(); // ✅ Cargar autor al iniciar
+    this.author = this.userService.getUsername();
     this.obtenerTopics();
   }
 
   obtenerTopics() {
-    this.http.get<any[]>('http://localhost:8081/api/topics/by-category/PELICULAS')
-      .subscribe(data => this.topics = data);
+    this.http.get<any[]>(`${this.API_BASE}/topics/by-category/PELICULAS`)
+      .subscribe(data => {
+        this.topics = data;
+        this.topics.forEach(topic => {
+          this.commentForms[topic.id] = this.fb.group({ text: ['', Validators.required] });
+          this.obtenerComentarios(topic.id);
+        });
+      });
   }
 
   onSubmit() {
@@ -111,31 +147,47 @@ export class CineComponent implements OnInit {
 
     const newTopic = {
       ...this.topicForm.value,
-      author: this.userService.getUsername() // ✅ Leer autor actualizado desde token
+      author: this.userService.getUsername()
     };
 
-    this.http.post('http://localhost:8081/api/topics/create?categoryId=2', newTopic, {
+    this.http.post(`${this.API_BASE}/topics/create?categoryId=2`, newTopic, {
       responseType: 'text'
-    }).subscribe({
-      next: () => {
-        this.topicForm.reset();
-        this.mostrarFormulario = false;
-        this.obtenerTopics();
-      },
-      error: err => console.error('❌ Error al crear tópico:', err)
-    });
+    }).subscribe(() => {
+      this.topicForm.reset();
+      this.mostrarFormulario = false;
+      this.obtenerTopics();
+    }, err => console.error('❌ Error al crear tópico:', err));
   }
 
   eliminarTema(id: number) {
     if (confirm('¿Estás seguro de que quieres eliminar este tema?')) {
-      this.http.delete(`http://localhost:8081/api/topics/delete/${id}`)
-        .subscribe({
-          next: () => {
-            console.log('🗑️ Tópico eliminado:', id);
-            this.obtenerTopics();
-          },
-          error: err => console.error('❌ Error al borrar tópico:', err)
-        });
+      this.http.delete(`${this.API_BASE}/topics/delete/${id}`).subscribe(() => {
+        this.obtenerTopics();
+      });
     }
+  }
+
+  obtenerComentarios(topicId: number) {
+    this.http.get<any[]>(`${this.API_BASE}/topics/${topicId}/comments`)
+      .subscribe(data => this.commentsMap[topicId] = data);
+  }
+
+  enviarComentario(topicId: number) {
+    const form = this.commentForms[topicId];
+    if (form.invalid) return;
+
+    const comment = {
+      text: form.value.text,
+      author: this.userService.getUsername()
+    };
+
+    this.http.post(`${this.API_BASE}/topics/${topicId}/comments`, comment).subscribe(() => {
+      form.reset();
+      this.obtenerComentarios(topicId);
+    });
+  }
+
+  toggleComentarios(topicId: number) {
+    this.mostrarComentarios[topicId] = !this.mostrarComentarios[topicId];
   }
 }
